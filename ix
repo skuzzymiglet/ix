@@ -1,0 +1,33 @@
+#!/bin/bash
+
+echo "" > index
+echo "" | xclip -i
+
+zathura "$1" &
+npages=$(pdfinfo "$1" | grep Pages: | awk '{print $2}')
+for page in $(seq 1 "$npages"); do
+    pages[$page]=$(pdftotext -f "$page" -l "$page" "$1" -)
+done
+
+while true; do
+    if [[ ! $(xclip -o 2> /dev/null) ]]; then
+        true
+    else
+        c=$(xclip -o)
+        if [[ ! $p == "$c" ]]; then
+            for page in $(seq 1 "$npages"); do
+                if grep -i "$c" <(echo "${pages[page]}") > /dev/null; then
+                    if grep "  " <(echo "$c") > /dev/null; then
+                        t=$(echo "$c" | awk -F'  ' '{print $2}')
+                    else
+                        t=$c
+                    fi
+                    t="$(echo "$c" | xargs)"
+                    echo "found $t on page $page"
+                    echo "$page,$t" >> index
+                fi
+            done
+        fi
+        p=$c
+    fi
+done
